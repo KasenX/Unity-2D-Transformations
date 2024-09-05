@@ -218,31 +218,38 @@ public class MainObject : MonoBehaviour
 
     private Matrix3x3 Translate()
     {
-        IGB283Vector3 destinationPoint = towardsPoint1 ? point1 : point2;
-        IGB283Vector3 destinationVector = destinationPoint - position;
-        IGB283Vector3 directionVector = destinationVector / destinationVector.magnitude;
-        IGB283Vector3 deltaPosition = directionVector * speed * Time.deltaTime;
+        IGB283Vector3 targetPoint = towardsPoint1 ? point1 : point2;
+        IGB283Vector3 directionToTarget = targetPoint - position;
+        float distanceToTarget = directionToTarget.magnitude;
 
-        if (destinationVector.magnitude <= deltaPosition.magnitude)
+        IGB283Vector3 movementStep = (directionToTarget / distanceToTarget) * speed * Time.deltaTime;
+
+        if (distanceToTarget <= movementStep.magnitude)
         {
-            // Move to destination
-            deltaPosition = destinationVector;
-            // Reverse direction
+            // Snap to the target position
+            movementStep = directionToTarget;
+            // Toggle direction for the next movement
             towardsPoint1 = !towardsPoint1;
         }
-        position += deltaPosition;
+
+        position += movementStep;
 
         return IGB283Transform.Translate(position);
     }
 
     private Matrix3x3 Scale(float pathRatio)
     {
-        IGB283Vector3 nextScale = IGB283Vector3.Lerp(boundaryScale1, boundaryScale2, pathRatio);
+        IGB283Vector3 targetScale = IGB283Vector3.Lerp(boundaryScale1, boundaryScale2, pathRatio);
 
-        IGB283Vector3 scaleFactor = new IGB283Vector3(nextScale.x / scale.x, nextScale.y / scale.y, 1);
-        scale = nextScale;
+        IGB283Vector3 scalingFactor = new IGB283Vector3(
+            targetScale.x / scale.x,
+            targetScale.y / scale.y,
+            1
+        );
+        
+        scale = targetScale;
 
-        return IGB283Transform.Scale(scaleFactor);
+        return IGB283Transform.Scale(scalingFactor);
     }
 
     private Matrix3x3 RotateOrigin()
@@ -252,9 +259,10 @@ public class MainObject : MonoBehaviour
 
     private Matrix3x3 Rotate()
     {
-        float deltaRotation = rotationSpeed * Time.deltaTime;
-        rotation += deltaRotation;
-        // Normalize the rotation in radians
+        float rotationIncrement = rotationSpeed * Time.deltaTime;
+        rotation += rotationIncrement;
+        
+        // Normalize the rotation to keep it within the range [0, 2π)
         rotation %= 2 * Mathf.PI;
 
         return IGB283Transform.Rotate(rotation);
